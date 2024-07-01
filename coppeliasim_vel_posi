@@ -1,0 +1,123 @@
+function sysCall_init()
+    -- Get joint handles
+    joint01 = sim.getObject('./axis1')
+    joint02 = sim.getObject('./axis2')
+    joint03 = sim.getObject('./axis3')
+    jointz = sim.getObject('./axis4')
+    
+    -- Set initial joint positions and velocities
+    sim.setJointTargetPosition(joint01, 0)
+    sim.setJointTargetPosition(joint02, 0)
+    sim.setJointTargetPosition(joint03, 0)
+    sim.setJointTargetPosition(jointz, 0)
+    sim.setJointTargetVelocity(joint01, 0.001)
+    sim.setJointTargetVelocity(joint02, 0.001)
+    sim.setJointTargetVelocity(joint03, 0.001)
+    sim.setJointTargetVelocity(jointz, 0.001)
+    sim.setJointTargetForce(joint01, 100.0)
+    sim.setJointTargetForce(joint02, 100.0)
+    sim.setJointTargetForce(joint03, 100.0)
+    sim.setJointTargetForce(jointz, 100.0)
+    
+    -- Get graph handle
+    graph = sim.getObject('/Graph')
+    
+    -- Add graph streams for X and Y velocities of each joint
+    graph_joint01_x = sim.addGraphStream(graph, 'joint01_x', 'm/s', 0, {1, 0, 0}, 0)
+    graph_joint01_y = sim.addGraphStream(graph, 'joint01_y', 'm/s', 0, {0.5, 0, 0}, 0)
+    
+    graph_joint02_x = sim.addGraphStream(graph, 'joint02_x', 'm/s', 0, {0, 1, 0}, 0)
+    graph_joint02_y = sim.addGraphStream(graph, 'joint02_y', 'm/s', 0, {0, 0.5, 0}, 0)
+    
+    graph_joint03_x = sim.addGraphStream(graph, 'joint03_x', 'm/s', 0, {0, 0, 1}, 0)
+    graph_joint03_y = sim.addGraphStream(graph, 'joint03_y', 'm/s', 0, {0, 0, 0.5}, 0)
+    
+    graph_jointz_x = sim.addGraphStream(graph, 'jointz_x', 'm/s', 0, {1, 1, 0}, 0)
+    graph_jointz_y = sim.addGraphStream(graph, 'jointz_y', 'm/s', 0, {1, 0.5, 0}, 0)
+    
+    deg1 = 0
+    deg2 = 0
+    zhing = false
+    pad = false
+    corout = coroutine.create(coroutineMain)
+end
+
+function sysCall_actuation()
+    if coroutine.status(corout) ~= 'dead' then
+        local ok, errorMsg = coroutine.resume(corout)
+        if errorMsg then
+            error(debug.traceback(corout, errorMsg), 2)
+        end
+    end
+end
+
+function sysCall_sensing()
+    -- Collect velocities
+    local velocity_joint01 = {sim.getObjectVelocity(joint01)}
+    local velocity_joint02 = {sim.getObjectVelocity(joint02)}
+    local velocity_joint03 = {sim.getObjectVelocity(joint03)}
+    local velocity_jointz = {sim.getObjectVelocity(jointz)}
+    
+    -- Extract linear velocities in X and Y directions
+    local velocity_joint01_x = velocity_joint01[1][1]
+    local velocity_joint01_y = velocity_joint01[1][2]
+    
+    local velocity_joint02_x = velocity_joint02[1][1]
+    local velocity_joint02_y = velocity_joint02[1][2]
+    
+    local velocity_joint03_x = velocity_joint03[1][1]
+    local velocity_joint03_y = velocity_joint03[1][2]
+    
+    local velocity_jointz_x = velocity_jointz[1][1]
+    local velocity_jointz_y = velocity_jointz[1][2]
+    
+    -- Update graph streams
+    sim.setGraphStreamValue(graph, graph_joint01_x, velocity_joint01_x)
+    sim.setGraphStreamValue(graph, graph_joint01_y, velocity_joint01_y)
+    
+    sim.setGraphStreamValue(graph, graph_joint02_x, velocity_joint02_x)
+    sim.setGraphStreamValue(graph, graph_joint02_y, velocity_joint02_y)
+    
+    sim.setGraphStreamValue(graph, graph_joint03_x, velocity_joint03_x)
+    sim.setGraphStreamValue(graph, graph_joint03_y, velocity_joint03_y)
+    
+    sim.setGraphStreamValue(graph, graph_jointz_x, velocity_jointz_x)
+    sim.setGraphStreamValue(graph, graph_jointz_y, velocity_jointz_y)
+    
+    -- Print velocities
+    print("Velocity joint01:", velocity_joint01_x, velocity_joint01_y)
+    print("Velocity joint02:", velocity_joint02_x, velocity_joint02_y)
+    print("Velocity joint03:", velocity_joint03_x, velocity_joint03_y)
+    print("Velocity jointz:", velocity_jointz_x, velocity_jointz_y)
+end
+
+function coroutineMain()
+    sim.setJointTargetPosition(joint01, 32 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint02, 34 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint03, 1.8 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(jointz, -0.55)
+    sim.wait(3)
+    sim.setInt32Signal("pad_switch", 1)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint03, 0 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint01, -32 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint02, -34 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint03, 1.8 * math.pi / 180)
+    sim.wait(3)
+    sim.setInt32Signal("pad_switch", 0)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint03, 0 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint01, 0 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint02, 0 * math.pi / 180)
+    sim.wait(3)
+    sim.setJointTargetPosition(joint03, 0 * math.pi / 180)
+    sim.wait(3)
+end
